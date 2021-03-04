@@ -1,11 +1,6 @@
 import random
 from z3 import *
 
-
-# static variables for 1 game
-n = k = 0
-moves = []
-
 # supplying new propositional variables
 var_counter = 0
 def count():
@@ -14,7 +9,7 @@ def count():
     var_counter = var_counter +1
     return str(count)
 
-def get_fresh_bool( suff = "" ):
+def get_fresh_bool(suff = ""):
     return Bool( "b_" + count() + "_" + suff )
 
 def get_fresh_vec(length, suff = "" ):
@@ -47,7 +42,7 @@ def at_most(vars, k):
     for i in range(1, len(vars)):
         clauses += [Or(Not(s[i-1][k-1]), Not(vars[i]))]
 
-    clauses += [s[len(vars)-1][k-1]]    
+    # clauses += [s[len(vars)-1][k-1]]    
     return clauses
 
 def sum_k(vars, k):
@@ -60,14 +55,24 @@ def sum_k(vars, k):
 
 ######################## API ###########################
 
+# static variables for 1 instance of the game
+n = k = 0
+moves = []
+
+colors_present = []
+color = 0
+find_colors = True
+
+pvs = []
+clauses = []
+org_to_sel = {}
+
 def initialize(num, sel):
     global n, k, moves
     n = num
     k = sel
     moves = []
-    guess = []
-    for _ in range(k):
-        guess.append(random.randint(0,n-1))
+    guess = [0]*k
 
     moves.append(guess)
 
@@ -77,7 +82,77 @@ def get_second_player_move():
     return moves[len(moves)-1]
 
 def put_first_player_response(red, white):
-    global n, k, moves
+    global var_counter, n, k, moves, colors_present, find_colors, color, clauses, org_to_sel, pvs
+
+    if(red == k):
+        return
+    
+    # print(n, k, find_colors)
+
+    if (find_colors and red > 0 and white == 0):
+        colors_present.append((color, red))
+        org_to_sel[color] = len(colors_present)-1
+
+        if(sum(list(map(lambda x: x[1], colors_present))) == k):
+            find_colors = False
+            var_counter = 0
+            clauses = []
+            pvs = [get_fresh_vec(k) for _ in range(len(colors_present))]
+            # print(pvs)
+            # print(colors_present)
+            for i in range(len(colors_present)):
+                clauses += sum_k(pvs[i], colors_present[i][1])
+
+            for j in range(k):
+                list_pvs = []
+                for i in range(len(colors_present)):
+                    list_pvs += [pvs[i][j]]
+                clauses += sum_k(list_pvs, 1)
+
+            sol = Solver()
+            sol.add(And(clauses))
+            assert(sol.check() == sat)
+
+            # print_model(sol.model())
+            moves.append(get_move(sol.model()))
+
+            return
+
+
+    if(find_colors):
+        # print("here")
+        color = (color+1)%n
+        moves.append([color]*k)
+
+
+    else:
+        # moves will contain colors from original set
+        # pvs in last move
+        selected_pvs = []
+        for i in range(k):
+            last_move = moves[len(moves)-1]
+            selected_pvs += [pvs[org_to_sel[last_move[i]]][i]]
+        
+        clauses += sum_k(selected_pvs, red)
+        sol = Solver()
+        sol.add(And(clauses))
+
+        assert(sol.check() == sat)
+        ## haven't considered lying cases yet
+        moves.append(get_move(sol.model()))
+
+
+def get_move(model):
+    global k, colors_present, pvs
+
+    move = [0]*k
+    for i in range(len(colors_present)):
+        for j in range(k):
+            if is_true(model[pvs[i][j]]):
+                # print("here")
+                move[j] = colors_present[i][0]
+    
+    return move
 
    
 
@@ -99,6 +174,10 @@ def check_sum(n, k):
         for pi in p:
             print(pi, m[pi])
 
-def printit():
-    global n, k
-    print(n, k)
+def print_model(model):
+    global pvs, n, k, colors_present
+    
+    for i in range(len(colors_present)):
+        for j in range(k):
+            print(model[pvs[i][j]], end=" ")
+        print("")

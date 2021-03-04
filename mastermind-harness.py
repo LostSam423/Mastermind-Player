@@ -7,7 +7,7 @@
 
 # your code lives in this file; we will import it
 import mastermind
-
+import time
 # We expect the following three functions in your code
 # their usage will explain their interface.
 #
@@ -20,8 +20,11 @@ import mastermind
 
 # we randomly choose number of colors and length of sequence
 import random
-n= random.randint(8, 12)
-k= random.randint(3, 7)
+# n= random.randint(8, 12)
+# k= random.randint(3, 7)
+random.seed(0)
+n = 12
+k = 7
 
 # two modes of testing
 # play with self or play with a human
@@ -74,32 +77,33 @@ def play_game():
     #      k is the size of the sequence
     #
     mastermind.initialize(n,k)
-    mastermind.printit()
+    # mastermind.printit()
 
-    print(mastermind.get_second_player_move())
-    print(mastermind.check_sum(11, 8))
-    # guess_list = []
-    # response_list = []
-    # red = 0
-    # while red < k:
-    #     # ~~~~ API CALL: we collect your move
-    #     # Your response should be of a list of k numbers. Ex. [ 2, 4, 4, 5]
-    #     # The numbers indicate the colors
-    #     #
-    #     move = mastermind.get_second_player_move()
-    #     guess_list.append(move)
-    #     if play_self:
-    #         red, white = get_auto_response( move )
-    #     else:
-    #         print("found a move:")
-    #         print( move )
-    #         red, white = get_human_response()
-    #     # ~~~~ API CALL: We send you red and white responses
-    #     #  red  : number of correct colors in correct positions 
-    #     #  white: number of correct colors in wrong positions
-    #     # 
-    #     mastermind.put_first_player_response( red, white )
-    # print("Game solved in " + str(len(guess_list)) +" moves for n = " + str (n)+ " and k = " + str(k)+ "!")
+    # print(mastermind.get_second_player_move())
+    # print(mastermind.check_sum(11, 2))
+    guess_list = []
+    response_list = []
+    red = 0
+    while red < k:
+        # ~~~~ API CALL: we collect your move
+        # Your response should be of a list of k numbers. Ex. [ 2, 4, 4, 5]
+        # The numbers indicate the colors
+        #
+        move = mastermind.get_second_player_move()
+        guess_list.append(move)
+        if play_self:
+            red, white = get_auto_response( move )
+        else:
+            print("found a move:")
+            print( move )
+            red, white = get_human_response()
+        # ~~~~ API CALL: We send you red and white responses
+        #  red  : number of correct colors in correct positions 
+        #  white: number of correct colors in wrong positions
+        # 
+        mastermind.put_first_player_response( red, white )
+        # time.sleep(2)
+    print("Game solved in " + str(len(guess_list)) +" moves for n = " + str (n)+ " and k = " + str(k)+ "!")
 
 
 play_game()
