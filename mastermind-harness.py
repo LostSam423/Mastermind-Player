@@ -77,6 +77,7 @@ def play_game():
     mastermind.printit()
 
     print(mastermind.get_second_player_move())
+    print(mastermind.check_sum(11, 8))
     # guess_list = []
     # response_list = []
     # red = 0
