@@ -1,7 +1,6 @@
-import random
 from z3 import *
 
-# supplying new propositional variables
+########## To keep track of the propositional variables #########
 var_counter = 0
 def count():
     global var_counter
@@ -56,6 +55,7 @@ def sum_k(vars, k):
 ######################## API ###########################
 
 # static variables for 1 instance of the game
+THRESH = 20
 n = k = 0
 moves = []
 
@@ -66,6 +66,9 @@ find_colors = True
 pvs = []
 clauses = []
 org_to_sel = {}
+
+unsat_count = 0
+essential_clauses_count = 0
 
 def initialize(num, sel):
     global n, k, moves
@@ -82,7 +85,7 @@ def get_second_player_move():
     return moves[len(moves)-1]
 
 def put_first_player_response(red, white):
-    global var_counter, n, k, moves, colors_present, find_colors, color, clauses, org_to_sel, pvs
+    global var_counter, n, k, moves, colors_present, find_colors, color, clauses, org_to_sel, pvs, unsat_count, essential_clauses_count, THRESH
 
     if(red == k):
         return
@@ -92,11 +95,11 @@ def put_first_player_response(red, white):
     if (find_colors and red > 0 and white == 0):
         colors_present.append((color, red))
         org_to_sel[color] = len(colors_present)-1
-
-        if(sum(list(map(lambda x: x[1], colors_present))) == k):
+        
+        total_ele = sum(list(map(lambda x: x[1], colors_present)))
+        if( total_ele == k):
             find_colors = False
-            var_counter = 0
-            clauses = []
+
             pvs = [get_fresh_vec(k) for _ in range(len(colors_present))]
             # print(pvs)
             # print(colors_present)
@@ -109,6 +112,8 @@ def put_first_player_response(red, white):
                     list_pvs += [pvs[i][j]]
                 clauses += sum_k(list_pvs, 1)
 
+            essential_clauses_count = len(clauses)
+
             sol = Solver()
             sol.add(And(clauses))
             assert(sol.check() == sat)
@@ -117,6 +122,8 @@ def put_first_player_response(red, white):
             moves.append(get_move(sol.model()))
 
             return
+        elif (total_ele > k):
+            colors_present = []
 
 
     if(find_colors):
@@ -128,18 +135,34 @@ def put_first_player_response(red, white):
     else:
         # moves will contain colors from original set
         # pvs in last move
+        if(red+white != k):
+            unsat_count += 1
+
+        sol = Solver()
         selected_pvs = []
         for i in range(k):
             last_move = moves[len(moves)-1]
             selected_pvs += [pvs[org_to_sel[last_move[i]]][i]]
         
         clauses += sum_k(selected_pvs, red)
-        sol = Solver()
         sol.add(And(clauses))
 
-        assert(sol.check() == sat)
-        ## haven't considered lying cases yet
-        moves.append(get_move(sol.model()))
+        if(sol.check() == unsat):
+            if(unsat_count >= THRESH):
+                moves.append([0]*k)
+                reset()
+                print("reset")
+            else:
+                clauses = clauses[:essential_clauses_count]
+                unsat_count += 1
+                sol = Solver()
+                sol.add(And(clauses))
+
+                assert(sol.check() == sat)
+                moves.append(get_move(sol.model()))
+
+        else:
+            moves.append(get_move(sol.model()))
 
 
 def get_move(model):
@@ -154,7 +177,18 @@ def get_move(model):
     
     return move
 
-   
+def reset():
+    global var_counter, n, k, moves, colors_present, find_colors, color, clauses, org_to_sel, pvs, unsat_count, essential_clauses_count
+
+    var_counter = 0
+    clauses = []
+    color = 0
+    find_colors = True
+    unsat_count = 0
+    org_to_sel = {}
+    colors_present = []
+    essential_clauses_count = 0
+
 
 ####################### Testing funcitons ##########################
 

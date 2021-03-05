@@ -22,10 +22,10 @@ import time
 import random
 # n= random.randint(8, 12)
 # k= random.randint(3, 7)
-random.seed(0)
+# random.seed(0)
 n = 12
 k = 7
-
+prob = 0.5
 # two modes of testing
 # play with self or play with a human
 #
@@ -55,10 +55,17 @@ def get_auto_response( move ):
                 whites_and_reds += 1
                 matched_idxs.append(j)
                 break
+    
+    # whites = whites_and_reds - reds
+
+    if(random.uniform(0,1) < prob and reds != k):
+        whites_and_reds = random.randint(0, k)
+        reds = random.randint(0, min(k-1, whites_and_reds))
+
     print("found a move:")
     print( move )
     print( "Enter red count: "  +str(reds) )
-    print( "Enter white count: "+str(whites_and_reds-reds) )
+    print( "Enter white count: "+str(whites_and_reds - reds) )
     return reds, whites_and_reds-reds
 
 def get_human_response():
