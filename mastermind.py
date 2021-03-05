@@ -74,6 +74,7 @@ almost_true_clauses = []
 clauses_outs = {}
 
 r_count = 0
+color_moves = 1
 
 def initialize(num, sel):
     global n, k, moves
@@ -90,53 +91,72 @@ def get_second_player_move():
     return moves[len(moves)-1]
 
 def put_first_player_response(red, white):
-    global var_counter, n, k, moves, colors_present, find_colors, color, clauses, org_to_sel, pvs, unsat_count, essential_clauses_count, r_count, almost_true_clauses, THRESH, TRUE_THRESH
+    global var_counter, n, k, moves, colors_present, find_colors, color, clauses, org_to_sel, pvs, unsat_count, essential_clauses_count, r_count, almost_true_clauses, THRESH, TRUE_THRESH, color_moves
 
     if(red == k):
-        print(r_count)
+        print(r_count, color_moves)
         return
     
     # print(n, k, find_colors)
 
     if (find_colors and red > 0 and white == 0):
-        colors_present.append((color, red))
-        org_to_sel[color] = len(colors_present)-1
+        key = str(moves[len(moves)-1])
+
+        ess = False
+        if key in clauses_outs.keys():
+            if clauses_outs[key] == True:
+                pass
+            elif clauses_outs[key].count(red) >= TRUE_THRESH:
+                ess = True
+                clauses_outs[key] = True
+            else:
+                clauses_outs[key] += [red]
+
+        else:
+            clauses_outs[key] = [red]
+
+        if ess:
+            colors_present.append((color, red))
+            org_to_sel[color] = len(colors_present)-1
         
-        total_ele = sum(list(map(lambda x: x[1], colors_present)))
-        if( total_ele == k):
-            find_colors = False
+            total_ele = sum(list(map(lambda x: x[1], colors_present)))
+            if( total_ele == k):
+                find_colors = False
 
-            pvs = [get_fresh_vec(k) for _ in range(len(colors_present))]
-            # print(pvs)
-            # print(colors_present)
-            for i in range(len(colors_present)):
-                clauses += sum_k(pvs[i], colors_present[i][1])
-
-            for j in range(k):
-                list_pvs = []
+                pvs = [get_fresh_vec(k) for _ in range(len(colors_present))]
+                # print(pvs)
+                # print(colors_present)
                 for i in range(len(colors_present)):
-                    list_pvs += [pvs[i][j]]
-                clauses += sum_k(list_pvs, 1)
+                    clauses += sum_k(pvs[i], colors_present[i][1])
 
-            essential_clauses_count = len(clauses)
+                for j in range(k):
+                    list_pvs = []
+                    for i in range(len(colors_present)):
+                        list_pvs += [pvs[i][j]]
+                    clauses += sum_k(list_pvs, 1)
 
-            sol = Solver()
-            sol.add(And(clauses))
-            assert(sol.check() == sat)
+                essential_clauses_count = len(clauses)
 
-            # print_model(sol.model())
-            moves.append(get_move(sol.model()))
-            return
+                sol = Solver()
+                sol.add(And(clauses))
+                assert(sol.check() == sat)
 
-        elif (total_ele > k):
-            r_count += 1
-            reset()
+                # print_model(sol.model())
+                moves.append(get_move(sol.model()))
+                return
 
+            elif (total_ele > k):
+                r_count += 1
+                # color_moves +=1
+                reset()
+        else:
+            color = (color-1)%n
 
     if(find_colors):
         # print("here")
         color = (color+1)%n
         moves.append([color]*k)
+        color_moves +=1 
 
 
     else:
@@ -160,6 +180,7 @@ def put_first_player_response(red, white):
 
         if(red+white != k):
             unsat_count += 1
+
 
         sol = Solver()
         selected_pvs = []
