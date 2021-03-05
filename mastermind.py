@@ -56,6 +56,7 @@ def sum_k(vars, k):
 
 # static variables for 1 instance of the game
 THRESH = 20
+TRUE_THRESH = 2
 n = k = 0
 moves = []
 
@@ -69,6 +70,10 @@ org_to_sel = {}
 
 unsat_count = 0
 essential_clauses_count = 0
+almost_true_clauses = []
+clauses_outs = {}
+
+r_count = 0
 
 def initialize(num, sel):
     global n, k, moves
@@ -85,9 +90,10 @@ def get_second_player_move():
     return moves[len(moves)-1]
 
 def put_first_player_response(red, white):
-    global var_counter, n, k, moves, colors_present, find_colors, color, clauses, org_to_sel, pvs, unsat_count, essential_clauses_count, THRESH
+    global var_counter, n, k, moves, colors_present, find_colors, color, clauses, org_to_sel, pvs, unsat_count, essential_clauses_count, r_count, almost_true_clauses, THRESH, TRUE_THRESH
 
     if(red == k):
+        print(r_count)
         return
     
     # print(n, k, find_colors)
@@ -120,10 +126,11 @@ def put_first_player_response(red, white):
 
             # print_model(sol.model())
             moves.append(get_move(sol.model()))
-
             return
+
         elif (total_ele > k):
-            colors_present = []
+            r_count += 1
+            reset()
 
 
     if(find_colors):
@@ -135,6 +142,22 @@ def put_first_player_response(red, white):
     else:
         # moves will contain colors from original set
         # pvs in last move
+
+        ess = False
+        key = str(moves[len(moves)-1])
+
+        if key in clauses_outs.keys():
+            if clauses_outs[key] == True:
+                pass
+            elif clauses_outs[key].count((red, white)) >= TRUE_THRESH:
+                ess = True
+                clauses_outs[key] = True
+            else:
+                clauses_outs[key] += [(red, white)]
+
+        else:
+            clauses_outs[key] = [(red, white)]
+
         if(red+white != k):
             unsat_count += 1
 
@@ -144,22 +167,30 @@ def put_first_player_response(red, white):
             last_move = moves[len(moves)-1]
             selected_pvs += [pvs[org_to_sel[last_move[i]]][i]]
         
-        clauses += sum_k(selected_pvs, red)
+        new = sum_k(selected_pvs, red)
+        clauses += new
+        if ess:
+            almost_true_clauses += new
+
         sol.add(And(clauses))
 
         if(sol.check() == unsat):
             if(unsat_count >= THRESH):
                 moves.append([0]*k)
                 reset()
-                print("reset")
             else:
                 clauses = clauses[:essential_clauses_count]
+                clauses += almost_true_clauses
                 unsat_count += 1
                 sol = Solver()
                 sol.add(And(clauses))
 
-                assert(sol.check() == sat)
-                moves.append(get_move(sol.model()))
+                # assert(sol.check() == sat)
+                if(sol.check() == unsat):
+                    moves.append([0]*k)
+                    reset()
+                else:
+                    moves.append(get_move(sol.model()))
 
         else:
             moves.append(get_move(sol.model()))
@@ -178,8 +209,9 @@ def get_move(model):
     return move
 
 def reset():
-    global var_counter, n, k, moves, colors_present, find_colors, color, clauses, org_to_sel, pvs, unsat_count, essential_clauses_count
+    global var_counter, n, k, moves, colors_present, find_colors, color, clauses, org_to_sel, pvs, unsat_count, essential_clauses_count, almost_true_clauses, clauses_outs
 
+    print("reset")
     var_counter = 0
     clauses = []
     color = 0
@@ -188,6 +220,9 @@ def reset():
     org_to_sel = {}
     colors_present = []
     essential_clauses_count = 0
+
+    almost_true_clauses = []
+    clauses_outs = {}
 
 
 ####################### Testing funcitons ##########################

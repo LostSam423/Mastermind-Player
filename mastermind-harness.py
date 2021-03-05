@@ -22,10 +22,10 @@ import time
 import random
 # n= random.randint(8, 12)
 # k= random.randint(3, 7)
-# random.seed(0)
+random.seed(3)
 n = 12
-k = 7
-prob = 0.5
+k = 8
+prob = 0.4
 # two modes of testing
 # play with self or play with a human
 #
